@@ -1,5 +1,7 @@
 import puppeteer from "puppeteer";
 import fs from "fs";
+import { Parser } from "json2csv";
+import XLSX from "xlsx";
 
 async function obtenerDatosAngularBlog() {
   //1.- Instanciar navegador
@@ -35,7 +37,7 @@ async function obtenerDatosAngularBlog() {
               avatar: imagen,
             },
             fecha: fechaModificada[0],
-            reacctione: {
+            reacciones: {
               likes: fechaModificada[1],
               comentarios: fechaModificada[2],
             },
@@ -47,7 +49,42 @@ async function obtenerDatosAngularBlog() {
     return resultados;
   });
 
-  console.log(datos);
+  // Crear archivo JSON
+  let jsonData = JSON.stringify(datos);
+  fs.writeFileSync("datosAngularBlog.json", jsonData, "utf-8");
+  console.log("Archivo JSON creado!!!");
+
+  //Crear archivo CSV
+  const fields = ["titulo", "texto", "autor.nombre", "autor.avatar", "fecha", "reacciones.likes", "reacciones.comentarios"];
+  const json2csvParse = new Parser({
+    fields,
+    defaultValue: "No hay Información",
+  });
+  const csv = json2csvParse.parse(datos.map(item => item.articulo));
+  fs.writeFileSync("datosAngularBlog.csv", csv, "utf-8");
+  console.log("Archivo CSV creado!!!");
+
+  //Crear archivo XLSX
+  const data = datos.map(item => {
+    return {
+      Titulo: item.articulo.titulo,
+      Texto: item.articulo.texto,
+      Autor: item.articulo.autor.nombre,
+      Avatar: item.articulo.autor.avatar,
+      Fecha: item.articulo.fecha,
+      Likes: item.articulo.reacciones.likes,
+      Comentarios: item.articulo.reacciones.comentarios
+    };
+  })
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Datos Angular Blog");
+  XLSX.writeFile(workbook, "datosAngularBlog.xlsx");
+
+  console.log("Archivo XLSX creado!!!");
+
 
   navegador.close();
 }
